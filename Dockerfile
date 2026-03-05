@@ -4,8 +4,9 @@ RUN apt-get update && apt-get install -y \
     unixodbc \
     odbc-postgresql \
     libldap-dev \
-    && ln -s /usr/lib/x86_64-linux-gnu/libldap-2.5.so.0 /usr/lib/x86_64-linux-gnu/libldap-2.4.so.2 \
     && rm -rf /var/lib/apt/lists/*
+
+RUN find /usr/lib -name "libldap-2.5.so*" | head -1 | xargs -I{} ln -s {} /usr/lib/$(uname -m)-linux-gnu/libldap-2.4.so.2 || true
 
 WORKDIR /fdsloader
 
