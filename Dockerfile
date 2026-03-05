@@ -3,6 +3,7 @@ FROM ubuntu:22.04
 RUN apt-get update && apt-get install -y \
     unixodbc \
     odbc-postgresql \
+    libldap-2.4-2 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /fdsloader
