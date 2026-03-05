@@ -13,9 +13,9 @@ WORKDIR /fdsloader
 
 COPY FDSLoader64 .
 COPY cacert.pem .
-COPY config.xml .
+COPY entrypoint.sh .
 
-RUN chmod +x FDSLoader64
+RUN chmod +x FDSLoader64 entrypoint.sh
 
 RUN mkdir -p /fdsloader/tmp \
     /fdsloader/data \
@@ -27,4 +27,4 @@ RUN mkdir -p /fdsloader/tmp \
 
 ENV PAR_GLOBAL_TEMP=/fdsloader/tmp
 
-CMD ["./FDSLoader64"]
+CMD ["./entrypoint.sh"]
