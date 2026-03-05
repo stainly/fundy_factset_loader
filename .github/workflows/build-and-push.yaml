@@ -26,10 +26,12 @@ jobs:
       - name: Download FactSet binary assets
         run: |
           curl -H "Authorization: token ${{ secrets.FACTSET_ASSETS_TOKEN }}" \
-            -L "https://raw.githubusercontent.com/stainly/fundy_factset_assets/main/FDSLoader64" \
+            -H "Accept: application/vnd.github.v3.raw" \
+            -L "https://api.github.com/repos/stainly/fundy_factset_assets/contents/FDSLoader64" \
             -o FDSLoader64
           curl -H "Authorization: token ${{ secrets.FACTSET_ASSETS_TOKEN }}" \
-            -L "https://raw.githubusercontent.com/stainly/fundy_factset_assets/main/cacert.pem" \
+            -H "Accept: application/vnd.github.v3.raw" \
+            -L "https://api.github.com/repos/stainly/fundy_factset_assets/contents/cacert.pem" \
             -o cacert.pem
           chmod +x FDSLoader64
 
