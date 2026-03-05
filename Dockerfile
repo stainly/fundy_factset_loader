@@ -13,7 +13,7 @@ WORKDIR /fdsloader
 
 COPY FDSLoader64 .
 COPY cacert.pem .
-COPY config .
+COPY config.xml .
 
 RUN chmod +x FDSLoader64
 

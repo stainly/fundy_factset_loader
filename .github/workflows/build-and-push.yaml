@@ -35,8 +35,8 @@ jobs:
             -o cacert.pem
           curl -H "Authorization: token ${{ secrets.FACTSET_ASSETS_TOKEN }}" \
             -H "Accept: application/vnd.github.v3.raw" \
-            -L "https://api.github.com/repos/stainly/fundy_factset_assets/contents/config" \
-            -o config
+            -L "https://api.github.com/repos/stainly/fundy_factset_assets/contents/config.xml" \
+            -o config.xml
           chmod +x FDSLoader64
 
       - name: Set up QEMU
