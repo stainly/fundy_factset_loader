@@ -6,12 +6,14 @@ RUN apt-get update && apt-get install -y \
     libldap-dev \
     && rm -rf /var/lib/apt/lists/*
 
-RUN find /usr/lib -name "libldap-2.5.so*" | head -1 | xargs -I{} ln -s {} /usr/lib/$(uname -m)-linux-gnu/libldap-2.4.so.2 || true
+RUN find /usr/lib -name "libldap-2.5.so*" | head -1 | \
+    xargs -I{} ln -s {} /usr/lib/$(uname -m)-linux-gnu/libldap-2.4.so.2 || true
 
 WORKDIR /fdsloader
 
 COPY FDSLoader64 .
 COPY cacert.pem .
+COPY config .
 
 RUN chmod +x FDSLoader64
 
