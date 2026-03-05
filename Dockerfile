@@ -15,7 +15,14 @@ COPY cacert.pem .
 
 RUN chmod +x FDSLoader64
 
+RUN mkdir -p /fdsloader/tmp \
+    /fdsloader/data \
+    /fdsloader/formats \
+    /fdsloader/schemas \
+    /fdsloader/support \
+    /fdsloader/temp \
+    /fdsloader/zips
+
 ENV PAR_GLOBAL_TEMP=/fdsloader/tmp
-RUN mkdir -p /fdsloader/tmp
 
 CMD ["./FDSLoader64"]
