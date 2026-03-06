@@ -1,14 +1,22 @@
 FROM ubuntu:22.04
 
 RUN apt-get update && apt-get install --no-install-recommends -y \
+      libcrypt1 \
       libldap-2.5-0 \
       odbc-postgresql \
       postgresql-client \
+      strace \
       unixodbc \
       && rm -rf /var/lib/apt/lists/*
 
 RUN find /usr/lib -name "libldap-2.5.so*" | head -1 | \
     xargs -I{} ln -s {} /usr/lib/$(uname -m)-linux-gnu/libldap-2.4.so.2 || true
+
+RUN ARCH=$(uname -m) && \
+    if [ ! -f "/usr/lib/${ARCH}-linux-gnu/libcrypt.so.1" ]; then \
+      ln -s /usr/lib/${ARCH}-linux-gnu/libcrypt.so /usr/lib/${ARCH}-linux-gnu/libcrypt.so.1 || \
+      ln -s /usr/lib/${ARCH}-linux-gnu/libcrypt.so.2 /usr/lib/${ARCH}-linux-gnu/libcrypt.so.1 || true; \
+    fi
 
 COPY system/etc/odbcinst.ini /etc/odbcinst.ini
 
