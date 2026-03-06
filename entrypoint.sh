@@ -37,11 +37,23 @@ sed \
 echo "INFO: Generated config.xml ($(wc -l < /fdsloader/config.xml) lines):"
 cat /fdsloader/config.xml
 
-echo "INFO: Encrypting database password..."
-./FDSLoader64 --update-password --instance db --pwd "$PGPASSWORD"
+echo "=== DIAGNOSTIC: Testing FDSLoader64 commands ==="
 
-echo "INFO: Config.xml after password encryption ($(wc -l < /fdsloader/config.xml) lines):"
-cat /fdsloader/config.xml
+echo "--- TEST 1: --help ---"
+./FDSLoader64 --help 2>&1 || echo "EXIT CODE: $?"
 
-echo "INFO: Launching FDSLoader64..."
-exec ./FDSLoader64
+echo "--- TEST 2: --version ---"
+./FDSLoader64 --version 2>&1 || echo "EXIT CODE: $?"
+
+echo "--- TEST 3: PAR extracted contents ---"
+ls -laR /fdsloader/tmp/
+
+echo "--- TEST 4: Checking extracted .so dependencies ---"
+find /fdsloader/tmp -name "*.so*" -exec ldd {} \; 2>&1 | grep "not found" || echo "All extracted .so dependencies found."
+
+echo "--- TEST 5: strace on --help ---"
+strace -f -e trace=open,openat,execve ./FDSLoader64 --help 2>&1 | tail -80
+
+echo "=== DIAGNOSTIC COMPLETE ==="
+echo "Container will sleep to allow kubectl exec if needed."
+sleep 3600
