@@ -1,30 +1,25 @@
-FROM ubuntu:22.04
+FROM ubuntu:jammy-20230916
 
-RUN apt-get update && apt-get install -y \
-    unixodbc \
-    odbc-postgresql \
-    libldap-dev \
-    && rm -rf /var/lib/apt/lists/*
+RUN echo "deb http://archive.ubuntu.com/ubuntu/ focal-updates main" >> \
+      /etc/apt/sources.list \
+      && apt-get update && apt-get install --no-install-recommends -y \
+      libldap-2.4-2=2.4.* \
+      odbc-postgresql=1:13.* \
+      postgresql-client=14+* \
+      unixodbc=2.3.* \
+      unzip=6.* \
+      && rm -rf /var/lib/apt/lists/*
 
-RUN find /usr/lib -name "libldap-2.5.so*" | head -1 | \
-    xargs -I{} ln -s {} /usr/lib/$(uname -m)-linux-gnu/libldap-2.4.so.2 || true
+COPY system/etc/odbcinst.ini /etc/odbcinst.ini
+COPY system/etc/config-template.xml /usr/local/etc/config-template.xml
+COPY system/bin/ /usr/local/bin/
 
-WORKDIR /fdsloader
+RUN groupadd -r fdsrunner \
+      && useradd -r -g fdsrunner fdsrunner \
+      && mkdir -p /home/fdsrunner \
+      && chown -R fdsrunner /home/fdsrunner
 
-COPY FDSLoader64 .
-COPY cacert.pem .
-COPY entrypoint.sh .
+USER fdsrunner
+WORKDIR /home/fdsrunner
 
-RUN chmod +x FDSLoader64 entrypoint.sh
-
-RUN mkdir -p /fdsloader/tmp \
-    /fdsloader/data \
-    /fdsloader/formats \
-    /fdsloader/schemas \
-    /fdsloader/support \
-    /fdsloader/temp \
-    /fdsloader/zips
-
-ENV PAR_GLOBAL_TEMP=/fdsloader/tmp
-
-CMD ["./entrypoint.sh"]
+CMD ["run_data_loader.sh"]
