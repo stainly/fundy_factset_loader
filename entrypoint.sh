@@ -2,11 +2,16 @@
 set -euo pipefail
 
 # ── LD_LIBRARY_PATH for ODBC driver resolution ──────────────────────
-# /etc/profile.d/ is not sourced in non-interactive shells, so we
-# source it explicitly here.
 if [ -f /etc/profile.d/odbc.sh ]; then
   # shellcheck disable=SC1091
   source /etc/profile.d/odbc.sh
+fi
+
+# ── Sync key.txt from persistent volume ──────────────────────────────
+if [ -f /fdsloader/keydir/key.txt ]; then
+  cp /fdsloader/keydir/key.txt /fdsloader/key.txt
+  chmod 600 /fdsloader/key.txt
+  echo "INFO: key.txt loaded from persistent volume."
 fi
 
 # ── Setup DSN ────────────────────────────────────────────────────────
@@ -37,25 +42,26 @@ echo "INFO: config.xml generated."
 echo "INFO: Encrypting database password..."
 ./FDSLoader64 --update-password --instance db --pwd "${PGPASSWORD}"
 
-# ── Symlink key.txt if mounted separately ────────────────────────────
-if [ -n "${KEY_FILE_PATH:-}" ] && [ -f "${KEY_FILE_PATH}" ]; then
-  ln -sf "${KEY_FILE_PATH}" /fdsloader/key.txt
-  echo "INFO: key.txt symlinked from ${KEY_FILE_PATH}"
-fi
-
 # ── Run loader ───────────────────────────────────────────────────────
 echo "INFO: Running FDSLoader64 --test ..."
 if ./FDSLoader64 --test 2>&1 | tee /fdsloader/test_results.txt; then
   test_errors=$(grep -c "ERROR" /fdsloader/test_results.txt || true)
   if [ "$test_errors" -gt 0 ]; then
     echo "ERROR: FDSLoader test completed with $test_errors error(s)."
+    # Persist key.txt before exit
+    cp /fdsloader/key.txt /fdsloader/keydir/key.txt 2>/dev/null || true
     exit 1
   fi
   echo "INFO: Test passed."
 else
   echo "ERROR: FDSLoader --test failed."
+  # Persist key.txt before exit
+  cp /fdsloader/key.txt /fdsloader/keydir/key.txt 2>/dev/null || true
   exit 1
 fi
+
+# ── Persist updated key.txt back to volume ───────────────────────────
+cp /fdsloader/key.txt /fdsloader/keydir/key.txt
 
 echo "INFO: Running FDSLoader64 (production)..."
 exec ./FDSLoader64
