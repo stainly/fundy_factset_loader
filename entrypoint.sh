@@ -1,8 +1,15 @@
 #!/bin/bash
 set -e
 
-echo "INFO: Generating config.xml from template..."
+echo "INFO: Setting up DSN..."
+sed \
+  -e "s|{DATABASE_NAME}|${PGDATABASE}|g" \
+  -e "s|{DATABASE_SERVER}|${PGHOST}|g" \
+  /fdsloader/DSN-template.ini > /fdsloader/DSN-FDSLoader.ini
 
+odbcinst -i -s -f /fdsloader/DSN-FDSLoader.ini
+
+echo "INFO: Generating config.xml from template..."
 sed \
   -e "s|{DATABASE_NAME}|${PGDATABASE}|g" \
   -e "s|{DATABASE_SERVER}|${PGHOST}|g" \
