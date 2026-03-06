@@ -1,43 +1,46 @@
-FROM ubuntu:22.04
+FROM ubuntu:jammy-20230916
 
-RUN apt-get update && apt-get install --no-install-recommends -y \
-      libcrypt1 \
-      libldap-2.5-0 \
-      odbc-postgresql \
-      postgresql-client \
-      strace \
-      unixodbc \
-      && rm -rf /var/lib/apt/lists/*
+# Add focal-updates for libldap-2.4-2 (FDSLoader64 PAR runtime links against 2.4, not 2.5)
+RUN echo "deb http://archive.ubuntu.com/ubuntu/ focal-updates main" >> /etc/apt/sources.list \
+    && apt-get update && apt-get install --no-install-recommends -y \
+      libexpat1=2.4.* \
+      libldap-2.4-2=2.4.* \
+      libnss3=2:3.68.* \
+      odbc-postgresql=1:13.* \
+      postgresql-client=14+* \
+      unixodbc=2.3.* \
+      unzip=6.* \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN find /usr/lib -name "libldap-2.5.so*" | head -1 | \
-    xargs -I{} ln -s {} /usr/lib/$(uname -m)-linux-gnu/libldap-2.4.so.2 || true
-
-RUN ARCH=$(uname -m) && \
-    if [ ! -f "/usr/lib/${ARCH}-linux-gnu/libcrypt.so.1" ]; then \
-      ln -s /usr/lib/${ARCH}-linux-gnu/libcrypt.so /usr/lib/${ARCH}-linux-gnu/libcrypt.so.1 || \
-      ln -s /usr/lib/${ARCH}-linux-gnu/libcrypt.so.2 /usr/lib/${ARCH}-linux-gnu/libcrypt.so.1 || true; \
-    fi
-
+# Register ODBC drivers system-wide
 COPY system/etc/odbcinst.ini /etc/odbcinst.ini
+
+# Persist LD_LIBRARY_PATH for ODBC .so resolution in non-interactive shells
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN echo "export LD_LIBRARY_PATH=$(dpkg-query -L odbc-postgresql | grep psqlodbcw.so | xargs dirname):\$LD_LIBRARY_PATH" \
+      >> /etc/profile.d/odbc.sh \
+    && chmod +x /etc/profile.d/odbc.sh
+
+# Non-root user (matches reference repo)
+RUN groupadd -r fdsrunner \
+    && useradd -r -g fdsrunner -m fdsrunner
 
 WORKDIR /fdsloader
 
-COPY FDSLoader64 .
-COPY cacert.pem .
-COPY system/etc/config-template.xml .
-COPY system/etc/DSN-template.ini .
-COPY entrypoint.sh .
+COPY system/etc/config-template.xml ./
+COPY system/etc/DSN-template.ini ./
+COPY entrypoint.sh ./
 
-RUN chmod +x FDSLoader64 entrypoint.sh
+# FDSLoader64 and cacert.pem are fetched by CI from the assets repo
+COPY FDSLoader64 ./
+COPY cacert.pem ./
 
-RUN mkdir -p /fdsloader/tmp \
-    /fdsloader/data \
-    /fdsloader/formats \
-    /fdsloader/schemas \
-    /fdsloader/support \
-    /fdsloader/temp \
-    /fdsloader/zips
+RUN chmod +x FDSLoader64 entrypoint.sh \
+    && mkdir -p tmp data formats schemas support temp zips \
+    && chown -R fdsrunner:fdsrunner /fdsloader
 
 ENV PAR_GLOBAL_TEMP=/fdsloader/tmp
+
+USER fdsrunner
 
 CMD ["./entrypoint.sh"]

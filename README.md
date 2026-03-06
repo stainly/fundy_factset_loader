@@ -1,27 +1,31 @@
 # Fundy FactSet Loader
 
-A Docker image for running the FactSet DataFeed Loader on Kubernetes.
+Docker image for running the FactSet DataFeed Loader on Kubernetes (AWS EKS).
 
-## Purpose
+## Overview
 
-This image packages the FactSet DataFeed Loader (v2.13.7.0) on Ubuntu 22.04, designed to run as a Kubernetes CronJob that ingests financial data into a PostgreSQL database.
+Packages FDSLoader64 v2.13.7.0 on Ubuntu 22.04 as a Kubernetes CronJob that ingests FactSet financial data into PostgreSQL (CloudNativePG).
 
-## What it does
+## Architecture
 
-The Loader runs on a scheduled interval and:
-- Connects to FactSet's servers to download financial data (Prices, Fundamentals, Estimates, People, Events, Ownership)
-- Pushes the data into a PostgreSQL database
+- `linux/amd64` only — FDSLoader64 is a x86_64 PAR binary
 
-## Supported Architectures
+## Required Environment Variables
 
-- `linux/amd64` (x86_64)
-- `linux/arm64` (ARM64/AWS Graviton)
+| Variable | Description |
+| --- | --- |
+| `PGHOST` | PostgreSQL server hostname |
+| `PGDATABASE` | Database name |
+| `PGUSER` | Database user |
+| `PGPASSWORD` | Database password (encrypted at startup) |
+| `FACTSET_SERIAL` | FactSet serial number |
+| `FACTSET_USER` | FactSet username |
+| `MACHINE_CORES` | Max parallel downloads (default: 4) |
+| `KEY_FILE_PATH` | Optional: path to mounted `key.txt` |
 
-## Usage
+## Required Secrets (Kubernetes)
 
-The image expects the following files to be injected at runtime via Kubernetes Secrets:
-- `config` — FactSet and database configuration
-- `key.txt` — FactSet OTP authentication key
+- `key.txt` — FactSet OTP authentication key (mount as file)
 
 ## Image Tags
 
@@ -29,10 +33,10 @@ The image expects the following files to be injected at runtime via Kubernetes S
 | --- | --- |
 | `latest` | Latest build from main branch |
 | `v*` | Specific release version |
-| `<sha>` | Git commit SHA for traceability |
+| `<sha>` | Git commit SHA |
 
 ## Requirements
 
-- PostgreSQL 17
-- FactSet DataFeed subscription (Prices, Fundamentals, Estimates)
-- FactSet Curator credentials for authentication
+- PostgreSQL 17 (CloudNativePG)
+- FactSet DataFeed subscription
+- FactSet Curator credentials

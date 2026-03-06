@@ -1,27 +1,25 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-echo "=== DEBUG: Environment diagnostics ==="
-echo "INFO: Checking shared library dependencies..."
-ldd /fdsloader/FDSLoader64 | grep "not found" && echo "WARNING: Missing libraries detected!" || echo "INFO: All libraries found."
-echo "INFO: libcrypt status:"
-ls -la /usr/lib/$(uname -m)-linux-gnu/libcrypt* 2>/dev/null || echo "WARNING: No libcrypt found!"
-echo "INFO: PAR_GLOBAL_TEMP=$PAR_GLOBAL_TEMP"
-ls -la "$PAR_GLOBAL_TEMP" 2>/dev/null || echo "WARNING: PAR_GLOBAL_TEMP dir missing!"
-echo "INFO: Working directory: $(pwd)"
-echo "INFO: Files in /fdsloader:"
-ls -la /fdsloader/
-echo "INFO: config-template.xml line count: $(wc -l < /fdsloader/config-template.xml)"
-echo "=== END DEBUG ==="
+# ── LD_LIBRARY_PATH for ODBC driver resolution ──────────────────────
+# /etc/profile.d/ is not sourced in non-interactive shells, so we
+# source it explicitly here.
+if [ -f /etc/profile.d/odbc.sh ]; then
+  # shellcheck disable=SC1091
+  source /etc/profile.d/odbc.sh
+fi
 
+# ── Setup DSN ────────────────────────────────────────────────────────
 echo "INFO: Setting up DSN..."
 sed \
-  -e "s|{DATABASE_NAME}|${PGDATABASE}|g" \
   -e "s|{DATABASE_SERVER}|${PGHOST}|g" \
+  -e "s|{DATABASE_NAME}|${PGDATABASE}|g" \
   /fdsloader/DSN-template.ini > /fdsloader/DSN-FDSLoader.ini
 
 odbcinst -i -s -f /fdsloader/DSN-FDSLoader.ini
+echo "INFO: DSN installed."
 
+# ── Generate config.xml ──────────────────────────────────────────────
 echo "INFO: Generating config.xml from template..."
 sed \
   -e "s|{DATABASE_NAME}|${PGDATABASE}|g" \
@@ -33,26 +31,31 @@ sed \
   -e "s|{MAX_PARALLEL_LIMIT}|${MACHINE_CORES:-4}|g" \
   /fdsloader/config-template.xml > /fdsloader/config.xml
 
-echo "INFO: Generated config.xml ($(wc -l < /fdsloader/config.xml) lines):"
-cat /fdsloader/config.xml
+echo "INFO: config.xml generated."
 
-echo "=== DIAGNOSTIC: Testing FDSLoader64 commands ==="
+# ── Encrypt DB password ──────────────────────────────────────────────
+echo "INFO: Encrypting database password..."
+./FDSLoader64 --update-password --instance db --pwd "${PGPASSWORD}"
 
-echo "--- TEST 1: --help ---"
-./FDSLoader64 --help 2>&1 || echo "EXIT CODE: $?"
+# ── Symlink key.txt if mounted separately ────────────────────────────
+if [ -n "${KEY_FILE_PATH:-}" ] && [ -f "${KEY_FILE_PATH}" ]; then
+  ln -sf "${KEY_FILE_PATH}" /fdsloader/key.txt
+  echo "INFO: key.txt symlinked from ${KEY_FILE_PATH}"
+fi
 
-echo "--- TEST 2: --version ---"
-./FDSLoader64 --version 2>&1 || echo "EXIT CODE: $?"
+# ── Run loader ───────────────────────────────────────────────────────
+echo "INFO: Running FDSLoader64 --test ..."
+if ./FDSLoader64 --test 2>&1 | tee /fdsloader/test_results.txt; then
+  test_errors=$(grep -c "ERROR" /fdsloader/test_results.txt || true)
+  if [ "$test_errors" -gt 0 ]; then
+    echo "ERROR: FDSLoader test completed with $test_errors error(s)."
+    exit 1
+  fi
+  echo "INFO: Test passed."
+else
+  echo "ERROR: FDSLoader --test failed."
+  exit 1
+fi
 
-echo "--- TEST 3: PAR extracted contents ---"
-ls -laR /fdsloader/tmp/
-
-echo "--- TEST 4: Checking extracted .so dependencies ---"
-find /fdsloader/tmp -name "*.so*" -exec ldd {} \; 2>&1 | grep "not found" || echo "All extracted .so dependencies found."
-
-echo "--- TEST 5: strace on --help ---"
-strace -f -e trace=open,openat,execve ./FDSLoader64 --help 2>&1 | tail -80
-
-echo "=== DIAGNOSTIC COMPLETE ==="
-echo "Container will sleep to allow kubectl exec if needed."
-sleep 3600
+echo "INFO: Running FDSLoader64 (production)..."
+exec ./FDSLoader64
