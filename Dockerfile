@@ -7,19 +7,28 @@ RUN echo "deb http://archive.ubuntu.com/ubuntu/ focal-updates main" >> \
       odbc-postgresql=1:13.* \
       postgresql-client=14+* \
       unixodbc=2.3.* \
-      unzip=6.* \
       && rm -rf /var/lib/apt/lists/*
 
 COPY system/etc/odbcinst.ini /etc/odbcinst.ini
-COPY system/etc/config-template.xml /usr/local/etc/config-template.xml
-COPY system/bin/ /usr/local/bin/
 
-RUN groupadd -r fdsrunner \
-      && useradd -r -g fdsrunner fdsrunner \
-      && mkdir -p /home/fdsrunner \
-      && chown -R fdsrunner /home/fdsrunner
+WORKDIR /fdsloader
 
-USER fdsrunner
-WORKDIR /home/fdsrunner
+COPY FDSLoader64 .
+COPY cacert.pem .
+COPY system/etc/config-template.xml .
+COPY system/etc/DSN-template.ini .
+COPY entrypoint.sh .
 
-CMD ["run_data_loader.sh"]
+RUN chmod +x FDSLoader64 entrypoint.sh
+
+RUN mkdir -p /fdsloader/tmp \
+    /fdsloader/data \
+    /fdsloader/formats \
+    /fdsloader/schemas \
+    /fdsloader/support \
+    /fdsloader/temp \
+    /fdsloader/zips
+
+ENV PAR_GLOBAL_TEMP=/fdsloader/tmp
+
+CMD ["./entrypoint.sh"]

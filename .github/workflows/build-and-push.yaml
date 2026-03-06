@@ -23,6 +23,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Download FactSet binary assets
+        run: |
+          curl -H "Authorization: token ${{ secrets.FACTSET_ASSETS_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3.raw" \
+            -L "https://api.github.com/repos/stainly/fundy_factset_assets/contents/FDSLoader64" \
+            -o FDSLoader64
+          curl -H "Authorization: token ${{ secrets.FACTSET_ASSETS_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3.raw" \
+            -L "https://api.github.com/repos/stainly/fundy_factset_assets/contents/cacert.pem" \
+            -o cacert.pem
+          chmod +x FDSLoader64
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
