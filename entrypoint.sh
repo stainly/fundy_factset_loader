@@ -43,29 +43,21 @@ echo "INFO: Encrypting database password..."
 ./FDSLoader64 --update-password --instance db --pwd "${PGPASSWORD}"
 
 # ── Run loader ───────────────────────────────────────────────────────
-echo "INFO: Running FDSLoader64 --test ..."
-if ./FDSLoader64 --test 2>&1 | tee /fdsloader/test_results.txt; then
-  test_errors=$(grep -c "ERROR" /fdsloader/test_results.txt || true)
-  if [ "$test_errors" -gt 0 ]; then
-    echo "ERROR: FDSLoader test completed with $test_errors error(s)."
-    echo "INFO: Generating support file..."
-    ./FDSLoader64 --support --support-logs-max 5
-    cp support_*.zip /fdsloader/keydir/ 2>/dev/null || true
-    cp /fdsloader/key.txt /fdsloader/keydir/key.txt 2>/dev/null || true
-    exit 1
-  fi
-  echo "INFO: Test passed."
-else
-  echo "ERROR: FDSLoader --test failed."
+echo "INFO: Running FDSLoader64..."
+./FDSLoader64 2>&1 | tee /fdsloader/run_results.txt
+loader_exit=$?
+
+# ── Persist updated key.txt ──────────────────────────────────────────
+cp /fdsloader/key.txt /fdsloader/keydir/key.txt 2>/dev/null || true
+
+# ── Handle errors ────────────────────────────────────────────────────
+run_errors=$(grep -c "ERROR" /fdsloader/run_results.txt || true)
+if [ "$run_errors" -gt 0 ] || [ "$loader_exit" -ne 0 ]; then
+  echo "ERROR: FDSLoader completed with errors."
   echo "INFO: Generating support file..."
   ./FDSLoader64 --support --support-logs-max 5
   cp support_*.zip /fdsloader/keydir/ 2>/dev/null || true
-  cp /fdsloader/key.txt /fdsloader/keydir/key.txt 2>/dev/null || true
   exit 1
 fi
 
-# ── Persist updated key.txt back to volume ───────────────────────────
-cp /fdsloader/key.txt /fdsloader/keydir/key.txt
-
-echo "INFO: Running FDSLoader64 (production)..."
-exec ./FDSLoader64
+echo "INFO: FDSLoader completed successfully."
