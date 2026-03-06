@@ -17,7 +17,7 @@ COPY system/etc/odbcinst.ini /etc/odbcinst.ini
 
 # Persist LD_LIBRARY_PATH for ODBC .so resolution in non-interactive shells
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-RUN echo "export LD_LIBRARY_PATH=$(dpkg-query -L odbc-postgresql | grep psqlodbcw.so | xargs dirname):\$LD_LIBRARY_PATH" \
+RUN echo "export LD_LIBRARY_PATH=$(dpkg-query -L odbc-postgresql | grep psqlodbcw.so | xargs dirname):${LD_LIBRARY_PATH:-}" \
       >> /etc/profile.d/odbc.sh \
     && chmod +x /etc/profile.d/odbc.sh
 
