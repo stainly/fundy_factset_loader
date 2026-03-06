@@ -27,7 +27,6 @@ sed \
   -e "s|{DATABASE_NAME}|${PGDATABASE}|g" \
   -e "s|{DATABASE_SERVER}|${PGHOST}|g" \
   -e "s|{DATABASE_USER}|${PGUSER}|g" \
-  -e "s|{DOWNLOAD_BASEDIR}|/fdsloader/zips|g" \
   -e "s|{FACTSET_SERIAL}|${FACTSET_SERIAL}|g" \
   -e "s|{FACTSET_USER}|${FACTSET_USER}|g" \
   -e "s|{LOCAL_BASEDIR}|/fdsloader|g" \

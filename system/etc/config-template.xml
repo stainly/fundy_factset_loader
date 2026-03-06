@@ -4,10 +4,12 @@
     <max_parallel_limit>{MAX_PARALLEL_LIMIT}</max_parallel_limit>
   </advanced>
   <database>
-    <cloud>0</cloud>
+    <cloud>1</cloud>
+    <cloud_type>rds</cloud_type>
     <database_name>{DATABASE_NAME}</database_name>
     <dsn>FDSLoader</dsn>
-    <load_executable_path>/usr/bin/psql</load_executable_path>
+    <mssql></mssql>
+    <oracle></oracle>
     <pass></pass>
     <port>5432</port>
     <server_name>{DATABASE_SERVER}</server_name>
@@ -17,7 +19,6 @@
   </database>
   <download_only>0</download_only>
   <files>
-    <download_basedir>{DOWNLOAD_BASEDIR}</download_basedir>
     <local_basedir>{LOCAL_BASEDIR}</local_basedir>
   </files>
   <proxy>
