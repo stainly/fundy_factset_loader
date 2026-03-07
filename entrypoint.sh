@@ -1,6 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
+# ── Persist key.txt on exit (success or crash) ───────────────────────
+cleanup() {
+  cp /fdsloader/key.txt /fdsloader/keydir/key.txt 2>/dev/null || true
+}
+trap cleanup EXIT
+
 # ── LD_LIBRARY_PATH for ODBC driver resolution ──────────────────────
 if [ -f /etc/profile.d/odbc.sh ]; then
   # shellcheck disable=SC1091
@@ -46,9 +52,6 @@ echo "INFO: Encrypting database password..."
 echo "INFO: Running FDSLoader64..."
 ./FDSLoader64 2>&1 | tee /fdsloader/run_results.txt
 loader_exit=$?
-
-# ── Persist updated key.txt ──────────────────────────────────────────
-cp /fdsloader/key.txt /fdsloader/keydir/key.txt 2>/dev/null || true
 
 # ── Handle errors ────────────────────────────────────────────────────
 run_errors=$(grep -c "ERROR" /fdsloader/run_results.txt || true)
