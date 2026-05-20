@@ -50,17 +50,23 @@ echo "INFO: Encrypting database password..."
 
 # ── Run loader ───────────────────────────────────────────────────────
 echo "INFO: Running FDSLoader64..."
+set +e
 ./FDSLoader64 2>&1 | tee /fdsloader/run_results.txt
-loader_exit=$?
+loader_exit=${PIPESTATUS[0]}
+set -e
 
 # ── Handle errors ────────────────────────────────────────────────────
 run_errors=$(grep -c "ERROR" /fdsloader/run_results.txt || true)
-if [ "$run_errors" -gt 0 ] || [ "$loader_exit" -ne 0 ]; then
-  echo "ERROR: FDSLoader completed with errors."
+if [ "$run_errors" -gt 0 ] || [ "$loader_exit" -eq 1 ]; then
+  echo "ERROR: FDSLoader completed with errors (exit code: $loader_exit)."
   echo "INFO: Generating support file..."
   ./FDSLoader64 --support --support-logs-max 5
   cp support_*.zip /fdsloader/keydir/ 2>/dev/null || true
   exit 1
 fi
 
-echo "INFO: FDSLoader completed successfully."
+if [ "$loader_exit" -eq 2 ]; then
+  echo "WARN: FDSLoader completed with warnings (exit code 2). Check log for details."
+else
+  echo "INFO: FDSLoader completed successfully."
+fi
